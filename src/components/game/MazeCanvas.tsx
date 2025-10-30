@@ -148,55 +148,43 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
     if (!ctx) return;
 
     const gameLoop = () => {
-      // Clear canvas
-      ctx.fillStyle = "hsl(var(--background))";
+      // Clear canvas with dark background
+      ctx.fillStyle = "#1a1d2e";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // Draw maze
       mazeRef.current.forEach((row, y) => {
         row.forEach((cell, x) => {
           if (cell === 1) {
-            ctx.fillStyle = "hsl(var(--game-wall))";
-            ctx.strokeStyle = "hsl(var(--border))";
+            // Wall
+            ctx.fillStyle = "#252a3f";
             ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+            ctx.strokeStyle = "#3a4262";
             ctx.strokeRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
           } else {
-            ctx.fillStyle = "hsl(var(--game-path))";
+            // Path
+            ctx.fillStyle = "#1e2236";
             ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
           }
         });
       });
 
-      // Draw goal with glow effect
+      // Draw goal as trophy emoji
       const goal = goalRef.current;
-      ctx.shadowBlur = 20;
-      ctx.shadowColor = "hsl(var(--game-goal))";
-      ctx.fillStyle = "hsl(var(--game-goal))";
-      ctx.beginPath();
-      ctx.arc(
-        goal.x * CELL_SIZE + CELL_SIZE / 2,
-        goal.y * CELL_SIZE + CELL_SIZE / 2,
-        GOAL_SIZE / 2,
-        0,
-        Math.PI * 2
-      );
-      ctx.fill();
+      ctx.font = "32px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = "#10b981";
+      ctx.fillText("🏆", goal.x * CELL_SIZE + CELL_SIZE / 2, goal.y * CELL_SIZE + CELL_SIZE / 2);
       ctx.shadowBlur = 0;
 
-      // Draw enemies with glow
+      // Draw enemies as monsters
       enemiesRef.current.forEach((enemy) => {
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = "hsl(var(--game-enemy))";
-        ctx.fillStyle = "hsl(var(--game-enemy))";
-        ctx.beginPath();
-        ctx.arc(
-          enemy.x * CELL_SIZE + CELL_SIZE / 2,
-          enemy.y * CELL_SIZE + CELL_SIZE / 2,
-          ENEMY_SIZE / 2,
-          0,
-          Math.PI * 2
-        );
-        ctx.fill();
+        ctx.font = "28px Arial";
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = "#ef4444";
+        ctx.fillText("👾", enemy.x * CELL_SIZE + CELL_SIZE / 2, enemy.y * CELL_SIZE + CELL_SIZE / 2);
         ctx.shadowBlur = 0;
 
         // Update enemy position (patrol)
@@ -213,20 +201,15 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
         }
       });
 
-      // Draw player with glow
+      // Draw player as animated character
       const player = playerRef.current;
-      ctx.shadowBlur = 20;
-      ctx.shadowColor = "hsl(var(--game-player))";
-      ctx.fillStyle = "hsl(var(--game-player))";
-      ctx.beginPath();
-      ctx.arc(
-        player.x * CELL_SIZE + CELL_SIZE / 2,
-        player.y * CELL_SIZE + CELL_SIZE / 2,
-        PLAYER_SIZE / 2,
-        0,
-        Math.PI * 2
-      );
-      ctx.fill();
+      ctx.font = "32px Arial";
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = "#06b6d4";
+      // Animate between different frames
+      const frames = ["🦸", "🦸‍♂️"];
+      const frameIndex = Math.floor(Date.now() / 500) % frames.length;
+      ctx.fillText(frames[frameIndex], player.x * CELL_SIZE + CELL_SIZE / 2, player.y * CELL_SIZE + CELL_SIZE / 2);
       ctx.shadowBlur = 0;
 
       // Handle player movement

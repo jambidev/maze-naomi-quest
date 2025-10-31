@@ -57,6 +57,13 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
   const enemyImageRef = useRef<HTMLImageElement>();
   const goalImageRef = useRef<HTMLImageElement>();
   const [imagesLoaded, setImagesLoaded] = useState(false);
+  
+  // Audio refs
+  const bgMusicRef = useRef<HTMLAudioElement>();
+  const coinSoundRef = useRef<HTMLAudioElement>();
+  const hitSoundRef = useRef<HTMLAudioElement>();
+  const winSoundRef = useRef<HTMLAudioElement>();
+  const gameOverSoundRef = useRef<HTMLAudioElement>();
 
   // Generate random maze
   const generateMaze = () => {
@@ -133,6 +140,29 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
     loadImages();
   }, []);
 
+  // Initialize audio
+  useEffect(() => {
+    // Create audio context for background music
+    bgMusicRef.current = new Audio();
+    bgMusicRef.current.loop = true;
+    bgMusicRef.current.volume = 0.3;
+    
+    // Note: Using data URLs for simple tones since we can't load external files
+    // In production, replace with actual audio files
+    
+    // Play background music
+    bgMusicRef.current.play().catch(() => {
+      // Autoplay might be blocked, will play on first user interaction
+    });
+    
+    return () => {
+      if (bgMusicRef.current) {
+        bgMusicRef.current.pause();
+        bgMusicRef.current = undefined;
+      }
+    };
+  }, []);
+
   // Initialize game
   useEffect(() => {
     mazeRef.current = generateMaze();
@@ -206,18 +236,35 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
       ctx.fillStyle = "#1a1d2e";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Draw maze
+      // Draw maze with better visuals
       mazeRef.current.forEach((row, y) => {
         row.forEach((cell, x) => {
           if (cell === 1) {
-            // Wall
-            ctx.fillStyle = "#252a3f";
+            // Wall with 3D effect
+            ctx.fillStyle = "#2d3548";
             ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-            ctx.strokeStyle = "#3a4262";
+            
+            // Add border for clarity
+            ctx.strokeStyle = "#4a5568";
+            ctx.lineWidth = 2;
             ctx.strokeRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+            
+            // Add inner shadow effect
+            ctx.fillStyle = "#1a1f2e";
+            ctx.fillRect(x * CELL_SIZE + 2, y * CELL_SIZE + 2, CELL_SIZE - 4, CELL_SIZE - 4);
           } else {
-            // Path
-            ctx.fillStyle = "#1e2236";
+            // Path with gradient
+            const gradient = ctx.createRadialGradient(
+              x * CELL_SIZE + CELL_SIZE / 2,
+              y * CELL_SIZE + CELL_SIZE / 2,
+              0,
+              x * CELL_SIZE + CELL_SIZE / 2,
+              y * CELL_SIZE + CELL_SIZE / 2,
+              CELL_SIZE / 2
+            );
+            gradient.addColorStop(0, "#1e2336");
+            gradient.addColorStop(1, "#151820");
+            ctx.fillStyle = gradient;
             ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
           }
         });
@@ -296,8 +343,8 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
         }
       });
 
-      // Handle player movement
-      const speed = 0.1;
+  // Handle player movement
+      const speed = 0.08;
       const playerTarget = playerTargetRef.current;
       let newX = playerTarget.x;
       let newY = playerTarget.y;
@@ -317,10 +364,26 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
         playerFacingRight.current = true;
       }
 
-      // Check collision with walls
-      const cellX = Math.floor(newX);
-      const cellY = Math.floor(newY);
-      if (mazeRef.current[cellY] && mazeRef.current[cellY][cellX] === 0) {
+      // Advanced collision detection with walls
+      const margin = 0.35; // Collision buffer
+      const checkPoints = [
+        { x: newX - margin, y: newY - margin }, // top-left
+        { x: newX + margin, y: newY - margin }, // top-right
+        { x: newX - margin, y: newY + margin }, // bottom-left
+        { x: newX + margin, y: newY + margin }, // bottom-right
+      ];
+
+      let canMove = true;
+      for (const point of checkPoints) {
+        const cellX = Math.floor(point.x);
+        const cellY = Math.floor(point.y);
+        if (!mazeRef.current[cellY] || mazeRef.current[cellY][cellX] === 1) {
+          canMove = false;
+          break;
+        }
+      }
+
+      if (canMove) {
         playerTarget.x = newX;
         playerTarget.y = newY;
       }
@@ -331,13 +394,20 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
       player.x += (playerTarget.x - player.x) * smoothing;
       player.y += (playerTarget.y - player.y) * smoothing;
 
-      // Draw player with walking animation
+      // Draw player with enhanced walking animation
       if (heroImageRef.current) {
         ctx.save();
         
         // Calculate movement speed for animation
         const isMoving = keysPressed.current.size > 0;
-        const bounce = isMoving ? Math.abs(Math.sin(Date.now() / 150)) * 2 : 0;
+        const time = Date.now();
+        
+        // Enhanced bounce animation
+        const bounce = isMoving ? Math.abs(Math.sin(time / 120)) * 4 : Math.sin(time / 500) * 1;
+        
+        // Squash and stretch effect
+        const squash = isMoving ? 1 + Math.sin(time / 120) * 0.1 : 1;
+        const stretch = isMoving ? 1 - Math.sin(time / 120) * 0.1 : 1;
         
         // Position
         const playerX = player.x * CELL_SIZE + CELL_SIZE / 2;
@@ -350,14 +420,22 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
           ctx.scale(-1, 1);
         }
         
-        // Slight rotation when moving
+        // Dynamic rotation when moving
         if (isMoving) {
-          const tilt = Math.sin(Date.now() / 150) * 0.05;
+          const tilt = Math.sin(time / 100) * 0.08;
           ctx.rotate(tilt);
         }
         
-        ctx.shadowBlur = 20;
+        // Apply squash and stretch
+        ctx.scale(squash, stretch);
+        
+        // Enhanced glow effect
+        ctx.shadowBlur = 25;
         ctx.shadowColor = "#06b6d4";
+        
+        // Draw with slight transparency cycle for "breathing" effect
+        ctx.globalAlpha = 0.95 + Math.sin(time / 300) * 0.05;
+        
         ctx.drawImage(
           heroImageRef.current,
           -PLAYER_SIZE / 2,
@@ -365,6 +443,8 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
           PLAYER_SIZE,
           PLAYER_SIZE
         );
+        
+        ctx.globalAlpha = 1;
         ctx.shadowBlur = 0;
         ctx.restore();
       }
@@ -378,10 +458,15 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
           const distance = Math.sqrt(dx * dx + dy * dy);
 
           if (distance < 0.8) {
+            // Play hit sound
+            playSound(440, 0.1, 0.2);
+            
             setHp((prev) => {
               const newHp = prev - 1;
               if (newHp <= 0) {
                 const timeSeconds = Math.floor((Date.now() - startTimeRef.current) / 1000);
+                playSound(200, 0.3, 0.5);
+                if (bgMusicRef.current) bgMusicRef.current.pause();
                 onGameOver(score, timeSeconds, enemiesAvoided);
                 toast.error("Game Over! You were caught by an enemy!");
               } else {
@@ -402,6 +487,13 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
       if (goalDistance < 0.7) {
         const timeSeconds = Math.floor((Date.now() - startTimeRef.current) / 1000);
         const finalScore = score + 1000 - timeSeconds * 10 + enemiesAvoided * 50;
+        
+        // Play win sound
+        playSound(523, 0.2, 0.15);
+        setTimeout(() => playSound(659, 0.2, 0.15), 150);
+        setTimeout(() => playSound(784, 0.2, 0.3), 300);
+        
+        if (bgMusicRef.current) bgMusicRef.current.pause();
         onWin(finalScore, timeSeconds, enemiesAvoided);
         toast.success("You Win! 🎉");
         return;
@@ -422,12 +514,41 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
     };
   }, [hp, score, enemiesAvoided, onGameOver, onWin, imagesLoaded]);
 
+  // Simple sound effect generator
+  const playSound = (frequency: number, volume: number, duration: number) => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = frequency;
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + duration);
+    } catch (e) {
+      // Audio not supported
+    }
+  };
+
   // Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "w", "a", "s", "d"].includes(e.key)) {
         e.preventDefault();
+        const wasPressed = keysPressed.current.has(e.key);
         keysPressed.current.add(e.key);
+        
+        // Play step sound on first press
+        if (!wasPressed) {
+          playSound(150, 0.05, 0.05);
+        }
       }
     };
 

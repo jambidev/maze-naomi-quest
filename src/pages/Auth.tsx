@@ -45,7 +45,7 @@ export default function Auth() {
         });
 
         if (error) throw error;
-        toast.success("Welcome back!");
+        toast.success("Selamat datang kembali!");
       } else {
         const { error } = await supabase.auth.signUp({
           email,
@@ -59,10 +59,10 @@ export default function Auth() {
         });
 
         if (error) throw error;
-        toast.success("Account created! Welcome to Maze Game!");
+        toast.success("Akun berhasil dibuat! Selamat datang di Maze Game!");
       }
     } catch (error: any) {
-      toast.error(error.message || "An error occurred");
+      toast.error(error.message || "Terjadi kesalahan");
     } finally {
       setLoading(false);
     }
@@ -78,18 +78,18 @@ export default function Auth() {
             Maze Game Naomi
           </CardTitle>
           <CardDescription className="text-base">
-            {isLogin ? "Welcome back! Sign in to continue" : "Create an account to start playing"}
+            {isLogin ? "Selamat datang kembali! Masuk untuk melanjutkan" : "Buat akun untuk mulai bermain"}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleAuth} className="space-y-4">
             {!isLogin && (
               <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="username">Nama Pengguna</Label>
                 <Input
                   id="username"
                   type="text"
-                  placeholder="Enter your username"
+                  placeholder="Masukkan nama pengguna"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="bg-background/50"
@@ -102,7 +102,7 @@ export default function Auth() {
               <Input
                 id="email"
                 type="email"
-                placeholder="Enter your email"
+                placeholder="Masukkan email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -111,11 +111,11 @@ export default function Auth() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Kata Sandi</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your password"
+                placeholder="Masukkan kata sandi"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -132,12 +132,12 @@ export default function Auth() {
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Please wait
+                  Mohon tunggu
                 </>
               ) : isLogin ? (
-                "Sign In"
+                "Masuk"
               ) : (
-                "Sign Up"
+                "Daftar"
               )}
             </Button>
           </form>
@@ -148,8 +148,8 @@ export default function Auth() {
               className="text-sm text-primary hover:underline"
             >
               {isLogin
-                ? "Don't have an account? Sign up"
-                : "Already have an account? Sign in"}
+                ? "Belum punya akun? Daftar"
+                : "Sudah punya akun? Masuk"}
             </button>
           </div>
         </CardContent>

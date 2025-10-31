@@ -69,7 +69,7 @@ export const Leaderboard = () => {
       <CardHeader>
         <CardTitle className="text-2xl flex items-center gap-2">
           <Trophy className="w-6 h-6 text-primary" />
-          Top Players
+          Pemain Terbaik
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -81,7 +81,7 @@ export const Leaderboard = () => {
           </div>
         ) : entries.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">
-            No scores yet. Be the first to play!
+            Belum ada skor. Jadilah yang pertama bermain!
           </p>
         ) : (
           <div className="space-y-2">
@@ -98,14 +98,14 @@ export const Leaderboard = () => {
                   {getRankIcon(index)}
                 </div>
                 <div className="flex-1">
-                  <p className="font-semibold">{entry.profiles?.username || "Anonymous"}</p>
+                  <p className="font-semibold">{entry.profiles?.username || "Anonim"}</p>
                   <p className="text-sm text-muted-foreground">
-                    Level {entry.level} • {entry.time_seconds}s
+                    Level {entry.level} • {entry.time_seconds} detik
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-xl font-bold text-primary">{entry.score}</p>
-                  <p className="text-xs text-muted-foreground">points</p>
+                  <p className="text-xs text-muted-foreground">poin</p>
                 </div>
               </div>
             ))}

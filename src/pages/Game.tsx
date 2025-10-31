@@ -55,10 +55,10 @@ export default function Game() {
       });
 
       if (error) throw error;
-      toast.success("Score saved!");
+      toast.success("Skor tersimpan!");
     } catch (error: any) {
       console.error("Error saving score:", error);
-      toast.error("Failed to save score");
+      toast.error("Gagal menyimpan skor");
     }
   };
 
@@ -94,39 +94,39 @@ export default function Game() {
                 {gameState === "won" ? (
                   <span className="text-accent flex items-center justify-center gap-2">
                     <Trophy className="w-8 h-8" />
-                    Victory!
+                    Kemenangan!
                   </span>
                 ) : (
-                  <span className="text-destructive">Game Over</span>
+                  <span className="text-destructive">Game Berakhir</span>
                 )}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2 text-lg">
                 <p>
-                  <span className="text-muted-foreground">Final Score:</span>{" "}
+                  <span className="text-muted-foreground">Skor Akhir:</span>{" "}
                   <span className="font-bold text-primary">{finalScore}</span>
                 </p>
                 <p>
-                  <span className="text-muted-foreground">Time:</span>{" "}
+                  <span className="text-muted-foreground">Waktu:</span>{" "}
                   <span className="font-bold text-accent">{finalTime}s</span>
                 </p>
               </div>
 
               {gameState === "won" && (
                 <p className="text-muted-foreground">
-                  Congratulations! You've completed the maze! 🎉
+                  Selamat! Kamu berhasil menyelesaikan labirin! 🎉
                 </p>
               )}
 
               <div className="flex gap-4 justify-center">
                 <Button onClick={handleRestart} className="gap-2 glow-primary">
                   <RotateCcw className="w-4 h-4" />
-                  Play Again
+                  Main Lagi
                 </Button>
                 <Button variant="outline" onClick={() => navigate("/")} className="gap-2">
                   <Home className="w-4 h-4" />
-                  Main Menu
+                  Menu Utama
                 </Button>
               </div>
             </CardContent>

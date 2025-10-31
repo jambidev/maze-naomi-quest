@@ -46,7 +46,7 @@ export default function Index() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    toast.success("Signed out successfully");
+    toast.success("Berhasil keluar");
   };
 
   const handlePlay = () => {
@@ -68,7 +68,7 @@ export default function Index() {
             Maze Game Naomi
           </h1>
           <p className="text-xl text-muted-foreground">
-            Navigate through the maze, avoid enemies, and reach the goal!
+            Jelajahi labirin, hindari musuh, dan capai tujuan!
           </p>
         </div>
 
@@ -77,11 +77,11 @@ export default function Index() {
           {/* Play Card */}
           <Card className="glass-effect border-primary/20">
             <CardHeader>
-              <CardTitle className="text-3xl">Ready to Play?</CardTitle>
+              <CardTitle className="text-3xl">Siap Bermain?</CardTitle>
               <CardDescription className="text-base">
                 {user
-                  ? `Welcome back, ${username || "Player"}!`
-                  : "Sign in to save your scores and compete"}
+                  ? `Selamat datang kembali, ${username || "Pemain"}!`
+                  : "Masuk untuk menyimpan skor dan bersaing"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -91,7 +91,7 @@ export default function Index() {
                 className="w-full text-lg glow-primary animate-pulse-glow"
               >
                 <Play className="w-5 h-5 mr-2" />
-                {user ? "Start Game" : "Sign In to Play"}
+                {user ? "Mulai Game" : "Masuk untuk Bermain"}
               </Button>
 
               {user ? (
@@ -102,7 +102,7 @@ export default function Index() {
                   className="w-full"
                 >
                   <LogOut className="w-5 h-5 mr-2" />
-                  Sign Out
+                  Keluar
                 </Button>
               ) : (
                 <Button
@@ -112,18 +112,18 @@ export default function Index() {
                   className="w-full"
                 >
                   <LogIn className="w-5 h-5 mr-2" />
-                  Sign In / Sign Up
+                  Masuk / Daftar
                 </Button>
               )}
 
               <div className="pt-4 space-y-2 text-sm text-muted-foreground">
-                <h3 className="font-semibold text-foreground text-base mb-3">How to Play:</h3>
+                <h3 className="font-semibold text-foreground text-base mb-3">Cara Bermain:</h3>
                 <div className="space-y-2 pl-2">
-                  <p>🎮 Use Arrow Keys or WASD to move</p>
-                  <p>🔵 You are the blue circle</p>
-                  <p>🔴 Avoid the red enemies (3 HP)</p>
-                  <p>🟢 Reach the green goal to win</p>
-                  <p>⭐ Faster time = Higher score!</p>
+                  <p>🎮 Gunakan tombol panah atau WASD untuk bergerak</p>
+                  <p>🦸 Kamu adalah karakter pahlawan</p>
+                  <p>👾 Hindari musuh (3 HP)</p>
+                  <p>🏆 Capai trofi untuk menang</p>
+                  <p>⭐ Waktu lebih cepat = Skor lebih tinggi!</p>
                 </div>
               </div>
             </CardContent>
@@ -139,12 +139,12 @@ export default function Index() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-secondary">
                 <Trophy className="w-5 h-5" />
-                Compete
+                Bersaing
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Challenge players worldwide and climb the leaderboard
+                Tantang pemain di seluruh dunia dan naik di papan peringkat
               </p>
             </CardContent>
           </Card>
@@ -153,12 +153,12 @@ export default function Index() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-primary">
                 <Play className="w-5 h-5" />
-                Dynamic Mazes
+                Labirin Dinamis
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Every game features a unique randomly generated maze
+                Setiap game memiliki labirin acak yang unik
               </p>
             </CardContent>
           </Card>
@@ -167,12 +167,12 @@ export default function Index() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-accent">
                 <Trophy className="w-5 h-5" />
-                Smart AI
+                AI Pintar
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Face enemies with intelligent patrol patterns
+                Hadapi musuh dengan pola patroli yang cerdas
               </p>
             </CardContent>
           </Card>

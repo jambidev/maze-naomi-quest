@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import heroImage from "@/assets/hero-character.png";
+import enemyImage from "@/assets/enemy-character.png";
+import goalImage from "@/assets/goal-trophy.png";
 
 interface Position {
   x: number;
@@ -10,10 +13,14 @@ interface Position {
 interface Enemy {
   x: number;
   y: number;
+  targetX: number;
+  targetY: number;
   dx: number;
   dy: number;
   patrolIndex: number;
   patrolPoints: Position[];
+  facingRight: boolean;
+  animationOffset: number;
 }
 
 interface MazeCanvasProps {
@@ -35,6 +42,8 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
   const [gameTime, setGameTime] = useState(0);
   const [enemiesAvoided, setEnemiesAvoided] = useState(0);
   const playerRef = useRef<Position>({ x: 1, y: 1 });
+  const playerTargetRef = useRef<Position>({ x: 1, y: 1 });
+  const playerFacingRight = useRef(true);
   const goalRef = useRef<Position>({ x: MAZE_WIDTH - 2, y: MAZE_HEIGHT - 2 });
   const enemiesRef = useRef<Enemy[]>([]);
   const mazeRef = useRef<number[][]>([]);
@@ -42,6 +51,12 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
   const gameLoopRef = useRef<number>();
   const startTimeRef = useRef<number>(Date.now());
   const lastEnemyCheckRef = useRef<number>(Date.now());
+  
+  // Image loading
+  const heroImageRef = useRef<HTMLImageElement>();
+  const enemyImageRef = useRef<HTMLImageElement>();
+  const goalImageRef = useRef<HTMLImageElement>();
+  const [imagesLoaded, setImagesLoaded] = useState(false);
 
   // Generate random maze
   const generateMaze = () => {
@@ -92,10 +107,37 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
     return maze;
   };
 
+  // Load images
+  useEffect(() => {
+    const loadImages = async () => {
+      const hero = new Image();
+      const enemy = new Image();
+      const goal = new Image();
+      
+      hero.src = heroImage;
+      enemy.src = enemyImage;
+      goal.src = goalImage;
+      
+      await Promise.all([
+        new Promise((resolve) => { hero.onload = resolve; }),
+        new Promise((resolve) => { enemy.onload = resolve; }),
+        new Promise((resolve) => { goal.onload = resolve; }),
+      ]);
+      
+      heroImageRef.current = hero;
+      enemyImageRef.current = enemy;
+      goalImageRef.current = goal;
+      setImagesLoaded(true);
+    };
+    
+    loadImages();
+  }, []);
+
   // Initialize game
   useEffect(() => {
     mazeRef.current = generateMaze();
     playerRef.current = { x: 1, y: 1 };
+    playerTargetRef.current = { x: 1, y: 1 };
     goalRef.current = { x: MAZE_WIDTH - 2, y: MAZE_HEIGHT - 2 };
 
     // Create enemies with patrol patterns
@@ -103,6 +145,8 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
       {
         x: 5,
         y: 3,
+        targetX: 5,
+        targetY: 3,
         dx: 0.02,
         dy: 0,
         patrolIndex: 0,
@@ -110,10 +154,14 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
           { x: 5, y: 3 },
           { x: 7, y: 3 },
         ],
+        facingRight: true,
+        animationOffset: 0,
       },
       {
         x: 3,
         y: 7,
+        targetX: 3,
+        targetY: 7,
         dx: 0,
         dy: 0.02,
         patrolIndex: 0,
@@ -121,10 +169,14 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
           { x: 3, y: 7 },
           { x: 3, y: 9 },
         ],
+        facingRight: false,
+        animationOffset: 100,
       },
       {
         x: 9,
         y: 5,
+        targetX: 9,
+        targetY: 5,
         dx: 0.02,
         dy: 0.02,
         patrolIndex: 0,
@@ -132,17 +184,19 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
           { x: 9, y: 5 },
           { x: 11, y: 7 },
         ],
+        facingRight: true,
+        animationOffset: 200,
       },
     ];
 
     startTimeRef.current = Date.now();
-    toast.success("Game started! Reach the green goal!");
+    toast.success("Game started! Reach the golden trophy!");
   }, []);
 
   // Game loop
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !imagesLoaded) return;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
@@ -169,65 +223,150 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
         });
       });
 
-      // Draw goal as trophy emoji
+      // Draw goal with pulsing animation
       const goal = goalRef.current;
-      ctx.font = "32px Arial";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.shadowBlur = 15;
-      ctx.shadowColor = "#10b981";
-      ctx.fillText("🏆", goal.x * CELL_SIZE + CELL_SIZE / 2, goal.y * CELL_SIZE + CELL_SIZE / 2);
-      ctx.shadowBlur = 0;
-
-      // Draw enemies as monsters
-      enemiesRef.current.forEach((enemy) => {
-        ctx.font = "28px Arial";
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = "#ef4444";
-        ctx.fillText("👾", enemy.x * CELL_SIZE + CELL_SIZE / 2, enemy.y * CELL_SIZE + CELL_SIZE / 2);
+      if (goalImageRef.current) {
+        const pulse = Math.sin(Date.now() / 300) * 0.1 + 1;
+        const size = GOAL_SIZE * pulse;
+        ctx.save();
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = "#fbbf24";
+        ctx.drawImage(
+          goalImageRef.current,
+          goal.x * CELL_SIZE + (CELL_SIZE - size) / 2,
+          goal.y * CELL_SIZE + (CELL_SIZE - size) / 2,
+          size,
+          size
+        );
         ctx.shadowBlur = 0;
+        ctx.restore();
+      }
 
-        // Update enemy position (patrol)
+      // Draw and update enemies with smooth animation
+      enemiesRef.current.forEach((enemy) => {
+        // Smooth movement interpolation
+        const smoothing = 0.15;
+        enemy.x += (enemy.targetX - enemy.x) * smoothing;
+        enemy.y += (enemy.targetY - enemy.y) * smoothing;
+
+        // Update enemy target position (patrol)
         const target = enemy.patrolPoints[enemy.patrolIndex];
-        const dx = target.x - enemy.x;
-        const dy = target.y - enemy.y;
+        const dx = target.x - enemy.targetX;
+        const dy = target.y - enemy.targetY;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
         if (distance < 0.1) {
           enemy.patrolIndex = (enemy.patrolIndex + 1) % enemy.patrolPoints.length;
+          const newTarget = enemy.patrolPoints[enemy.patrolIndex];
+          enemy.facingRight = newTarget.x > enemy.targetX;
         } else {
-          enemy.x += (dx / distance) * 0.02;
-          enemy.y += (dy / distance) * 0.02;
+          enemy.targetX += (dx / distance) * 0.03;
+          enemy.targetY += (dy / distance) * 0.03;
+        }
+
+        // Draw enemy with animation
+        if (enemyImageRef.current) {
+          ctx.save();
+          
+          // Bobbing animation
+          const bob = Math.sin((Date.now() + enemy.animationOffset) / 200) * 3;
+          
+          // Position
+          const enemyX = enemy.x * CELL_SIZE + CELL_SIZE / 2;
+          const enemyY = enemy.y * CELL_SIZE + CELL_SIZE / 2 + bob;
+          
+          ctx.translate(enemyX, enemyY);
+          
+          // Flip based on direction
+          if (!enemy.facingRight) {
+            ctx.scale(-1, 1);
+          }
+          
+          ctx.shadowBlur = 15;
+          ctx.shadowColor = "#a855f7";
+          ctx.drawImage(
+            enemyImageRef.current,
+            -ENEMY_SIZE / 2,
+            -ENEMY_SIZE / 2,
+            ENEMY_SIZE,
+            ENEMY_SIZE
+          );
+          ctx.shadowBlur = 0;
+          ctx.restore();
         }
       });
 
-      // Draw player as animated character
-      const player = playerRef.current;
-      ctx.font = "32px Arial";
-      ctx.shadowBlur = 15;
-      ctx.shadowColor = "#06b6d4";
-      // Animate between different frames
-      const frames = ["🦸", "🦸‍♂️"];
-      const frameIndex = Math.floor(Date.now() / 500) % frames.length;
-      ctx.fillText(frames[frameIndex], player.x * CELL_SIZE + CELL_SIZE / 2, player.y * CELL_SIZE + CELL_SIZE / 2);
-      ctx.shadowBlur = 0;
-
       // Handle player movement
-      const speed = 0.08;
-      let newX = player.x;
-      let newY = player.y;
+      const speed = 0.1;
+      const playerTarget = playerTargetRef.current;
+      let newX = playerTarget.x;
+      let newY = playerTarget.y;
 
-      if (keysPressed.current.has("ArrowUp") || keysPressed.current.has("w")) newY -= speed;
-      if (keysPressed.current.has("ArrowDown") || keysPressed.current.has("s")) newY += speed;
-      if (keysPressed.current.has("ArrowLeft") || keysPressed.current.has("a")) newX -= speed;
-      if (keysPressed.current.has("ArrowRight") || keysPressed.current.has("d")) newX += speed;
+      if (keysPressed.current.has("ArrowUp") || keysPressed.current.has("w")) {
+        newY -= speed;
+      }
+      if (keysPressed.current.has("ArrowDown") || keysPressed.current.has("s")) {
+        newY += speed;
+      }
+      if (keysPressed.current.has("ArrowLeft") || keysPressed.current.has("a")) {
+        newX -= speed;
+        playerFacingRight.current = false;
+      }
+      if (keysPressed.current.has("ArrowRight") || keysPressed.current.has("d")) {
+        newX += speed;
+        playerFacingRight.current = true;
+      }
 
       // Check collision with walls
       const cellX = Math.floor(newX);
       const cellY = Math.floor(newY);
       if (mazeRef.current[cellY] && mazeRef.current[cellY][cellX] === 0) {
-        player.x = newX;
-        player.y = newY;
+        playerTarget.x = newX;
+        playerTarget.y = newY;
+      }
+
+      // Smooth movement interpolation
+      const player = playerRef.current;
+      const smoothing = 0.2;
+      player.x += (playerTarget.x - player.x) * smoothing;
+      player.y += (playerTarget.y - player.y) * smoothing;
+
+      // Draw player with walking animation
+      if (heroImageRef.current) {
+        ctx.save();
+        
+        // Calculate movement speed for animation
+        const isMoving = keysPressed.current.size > 0;
+        const bounce = isMoving ? Math.abs(Math.sin(Date.now() / 150)) * 2 : 0;
+        
+        // Position
+        const playerX = player.x * CELL_SIZE + CELL_SIZE / 2;
+        const playerY = player.y * CELL_SIZE + CELL_SIZE / 2 - bounce;
+        
+        ctx.translate(playerX, playerY);
+        
+        // Flip based on direction
+        if (!playerFacingRight.current) {
+          ctx.scale(-1, 1);
+        }
+        
+        // Slight rotation when moving
+        if (isMoving) {
+          const tilt = Math.sin(Date.now() / 150) * 0.05;
+          ctx.rotate(tilt);
+        }
+        
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = "#06b6d4";
+        ctx.drawImage(
+          heroImageRef.current,
+          -PLAYER_SIZE / 2,
+          -PLAYER_SIZE / 2,
+          PLAYER_SIZE,
+          PLAYER_SIZE
+        );
+        ctx.shadowBlur = 0;
+        ctx.restore();
       }
 
       // Check collision with enemies
@@ -281,7 +420,7 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
         cancelAnimationFrame(gameLoopRef.current);
       }
     };
-  }, [hp, score, enemiesAvoided, onGameOver, onWin]);
+  }, [hp, score, enemiesAvoided, onGameOver, onWin, imagesLoaded]);
 
   // Keyboard controls
   useEffect(() => {

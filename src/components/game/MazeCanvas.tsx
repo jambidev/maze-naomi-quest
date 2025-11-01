@@ -398,16 +398,12 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
 
       // Improved collision detection function
       const canMoveTo = (x: number, y: number): boolean => {
-        const margin = 0.3;
+        const margin = 0.35;
         const checkPoints = [
           { x: x - margin, y: y - margin }, // top-left
           { x: x + margin, y: y - margin }, // top-right
           { x: x - margin, y: y + margin }, // bottom-left
           { x: x + margin, y: y + margin }, // bottom-right
-          { x: x, y: y - margin },           // top-center
-          { x: x, y: y + margin },           // bottom-center
-          { x: x - margin, y: y },           // left-center
-          { x: x + margin, y: y },           // right-center
         ];
 
         for (const point of checkPoints) {
@@ -445,7 +441,7 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
 
       // Smooth movement interpolation
       const player = playerRef.current;
-      const smoothing = 0.2;
+      const smoothing = 0.25;
       player.x += (playerTarget.x - player.x) * smoothing;
       player.y += (playerTarget.y - player.y) * smoothing;
 

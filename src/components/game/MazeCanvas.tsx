@@ -65,13 +65,13 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
   const winSoundRef = useRef<HTMLAudioElement>();
   const gameOverSoundRef = useRef<HTMLAudioElement>();
 
-  // Generate random maze
+  // Generate solvable maze with guaranteed path
   const generateMaze = () => {
     const maze: number[][] = Array(MAZE_HEIGHT)
       .fill(0)
       .map(() => Array(MAZE_WIDTH).fill(1));
 
-    // Simple maze generation - create paths
+    // Create paths using DFS to ensure connectivity
     const stack: Position[] = [];
     const start = { x: 1, y: 1 };
     maze[start.y][start.x] = 0;
@@ -88,7 +88,10 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
       const current = stack[stack.length - 1];
       const neighbors: Position[] = [];
 
-      directions.forEach((dir) => {
+      // Shuffle directions for randomness
+      const shuffledDirs = [...directions].sort(() => Math.random() - 0.5);
+      
+      shuffledDirs.forEach((dir) => {
         const nx = current.x + dir.x;
         const ny = current.y + dir.y;
         if (nx > 0 && nx < MAZE_WIDTH - 1 && ny > 0 && ny < MAZE_HEIGHT - 1 && maze[ny][nx] === 1) {
@@ -110,6 +113,25 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
     maze[MAZE_HEIGHT - 2][MAZE_WIDTH - 2] = 0;
     maze[MAZE_HEIGHT - 2][MAZE_WIDTH - 3] = 0;
     maze[MAZE_HEIGHT - 3][MAZE_WIDTH - 2] = 0;
+    
+    // Add extra paths for better gameplay
+    for (let i = 0; i < 10; i++) {
+      const x = Math.floor(Math.random() * (MAZE_WIDTH - 2)) + 1;
+      const y = Math.floor(Math.random() * (MAZE_HEIGHT - 2)) + 1;
+      if (maze[y][x] === 1) {
+        // Check if this creates a valid path connection
+        const neighbors = [
+          maze[y-1]?.[x],
+          maze[y+1]?.[x],
+          maze[y]?.[x-1],
+          maze[y]?.[x+1]
+        ].filter(n => n === 0);
+        
+        if (neighbors.length >= 2) {
+          maze[y][x] = 0;
+        }
+      }
+    }
 
     return maze;
   };
@@ -170,57 +192,63 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
     playerTargetRef.current = { x: 1, y: 1 };
     goalRef.current = { x: MAZE_WIDTH - 2, y: MAZE_HEIGHT - 2 };
 
-    // Create enemies with patrol patterns
+    // Find valid patrol positions in open areas
+    const findPatrolPath = (startY: number, endY: number): Position[] => {
+      const points: Position[] = [];
+      for (let y = startY; y <= endY; y++) {
+        for (let x = 3; x < MAZE_WIDTH - 3; x++) {
+          if (mazeRef.current[y][x] === 0 && 
+              mazeRef.current[y][x-1] === 0 && 
+              mazeRef.current[y][x+1] === 0) {
+            points.push({ x, y });
+          }
+        }
+      }
+      return points.length >= 2 ? [points[0], points[Math.min(3, points.length - 1)]] : [{ x: 3, y: startY }, { x: 5, y: startY }];
+    };
+
+    // Create enemies with smart patrol patterns that don't block main paths
     enemiesRef.current = [
       {
-        x: 5,
+        x: 7,
         y: 3,
-        targetX: 5,
+        targetX: 7,
         targetY: 3,
         dx: 0.02,
         dy: 0,
         patrolIndex: 0,
-        patrolPoints: [
-          { x: 5, y: 3 },
-          { x: 7, y: 3 },
-        ],
+        patrolPoints: findPatrolPath(3, 3),
         facingRight: true,
         animationOffset: 0,
       },
       {
-        x: 3,
-        y: 7,
-        targetX: 3,
-        targetY: 7,
+        x: 5,
+        y: 6,
+        targetX: 5,
+        targetY: 6,
         dx: 0,
         dy: 0.02,
         patrolIndex: 0,
-        patrolPoints: [
-          { x: 3, y: 7 },
-          { x: 3, y: 9 },
-        ],
+        patrolPoints: findPatrolPath(5, 7),
         facingRight: false,
         animationOffset: 100,
       },
       {
-        x: 9,
+        x: 10,
         y: 5,
-        targetX: 9,
+        targetX: 10,
         targetY: 5,
         dx: 0.02,
         dy: 0.02,
         patrolIndex: 0,
-        patrolPoints: [
-          { x: 9, y: 5 },
-          { x: 11, y: 7 },
-        ],
+        patrolPoints: findPatrolPath(4, 6),
         facingRight: true,
         animationOffset: 200,
       },
     ];
 
     startTimeRef.current = Date.now();
-    toast.success("Game started! Reach the golden trophy!");
+    toast.success("Permainan dimulai! Raih trofi emas!");
   }, []);
 
   // Game loop
@@ -343,48 +371,75 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
         }
       });
 
-  // Handle player movement
-      const speed = 0.08;
+      // Handle player movement with improved collision
+      const speed = 0.1;
       const playerTarget = playerTargetRef.current;
-      let newX = playerTarget.x;
-      let newY = playerTarget.y;
+      let targetX = playerTarget.x;
+      let targetY = playerTarget.y;
 
+      // Calculate movement direction
+      let moveX = 0;
+      let moveY = 0;
+      
       if (keysPressed.current.has("ArrowUp") || keysPressed.current.has("w")) {
-        newY -= speed;
+        moveY -= speed;
       }
       if (keysPressed.current.has("ArrowDown") || keysPressed.current.has("s")) {
-        newY += speed;
+        moveY += speed;
       }
       if (keysPressed.current.has("ArrowLeft") || keysPressed.current.has("a")) {
-        newX -= speed;
+        moveX -= speed;
         playerFacingRight.current = false;
       }
       if (keysPressed.current.has("ArrowRight") || keysPressed.current.has("d")) {
-        newX += speed;
+        moveX += speed;
         playerFacingRight.current = true;
       }
 
-      // Advanced collision detection with walls
-      const margin = 0.35; // Collision buffer
-      const checkPoints = [
-        { x: newX - margin, y: newY - margin }, // top-left
-        { x: newX + margin, y: newY - margin }, // top-right
-        { x: newX - margin, y: newY + margin }, // bottom-left
-        { x: newX + margin, y: newY + margin }, // bottom-right
-      ];
+      // Improved collision detection function
+      const canMoveTo = (x: number, y: number): boolean => {
+        const margin = 0.3;
+        const checkPoints = [
+          { x: x - margin, y: y - margin }, // top-left
+          { x: x + margin, y: y - margin }, // top-right
+          { x: x - margin, y: y + margin }, // bottom-left
+          { x: x + margin, y: y + margin }, // bottom-right
+          { x: x, y: y - margin },           // top-center
+          { x: x, y: y + margin },           // bottom-center
+          { x: x - margin, y: y },           // left-center
+          { x: x + margin, y: y },           // right-center
+        ];
 
-      let canMove = true;
-      for (const point of checkPoints) {
-        const cellX = Math.floor(point.x);
-        const cellY = Math.floor(point.y);
-        if (!mazeRef.current[cellY] || mazeRef.current[cellY][cellX] === 1) {
-          canMove = false;
-          break;
+        for (const point of checkPoints) {
+          const cellX = Math.floor(point.x);
+          const cellY = Math.floor(point.y);
+          
+          // Check bounds
+          if (cellX < 0 || cellX >= MAZE_WIDTH || cellY < 0 || cellY >= MAZE_HEIGHT) {
+            return false;
+          }
+          
+          // Check wall collision
+          if (mazeRef.current[cellY]?.[cellX] === 1) {
+            return false;
+          }
         }
-      }
+        return true;
+      };
 
-      if (canMove) {
+      // Try to move with sliding on walls
+      const newX = targetX + moveX;
+      const newY = targetY + moveY;
+      
+      if (canMoveTo(newX, newY)) {
+        // Can move freely
         playerTarget.x = newX;
+        playerTarget.y = newY;
+      } else if (canMoveTo(newX, targetY)) {
+        // Can slide horizontally
+        playerTarget.x = newX;
+      } else if (canMoveTo(targetX, newY)) {
+        // Can slide vertically
         playerTarget.y = newY;
       }
 
@@ -468,9 +523,9 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
                 playSound(200, 0.3, 0.5);
                 if (bgMusicRef.current) bgMusicRef.current.pause();
                 onGameOver(score, timeSeconds, enemiesAvoided);
-                toast.error("Game Over! You were caught by an enemy!");
+                toast.error("Game Over! Kamu tertangkap musuh!");
               } else {
-                toast.warning(`Hit by enemy! HP: ${newHp}/3`);
+                toast.warning(`Terkena musuh! HP: ${newHp}/3`);
               }
               return newHp;
             });
@@ -495,7 +550,7 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
         
         if (bgMusicRef.current) bgMusicRef.current.pause();
         onWin(finalScore, timeSeconds, enemiesAvoided);
-        toast.success("You Win! 🎉");
+        toast.success("Kamu Menang! 🎉");
         return;
       }
 
@@ -590,11 +645,11 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
       />
 
       <div className="text-center text-muted-foreground">
-        <p className="text-sm">Use Arrow Keys or WASD to move</p>
+        <p className="text-sm">Gunakan Tombol Panah atau WASD untuk bergerak</p>
         <p className="text-xs mt-1">
-          <span className="text-primary">Blue = You</span> |{" "}
-          <span className="text-destructive">Red = Enemy</span> |{" "}
-          <span className="text-accent">Green = Goal</span>
+          <span className="text-cyan-400">Biru = Kamu</span> |{" "}
+          <span className="text-purple-400">Ungu = Musuh</span> |{" "}
+          <span className="text-yellow-400">Emas = Tujuan</span>
         </p>
       </div>
     </div>

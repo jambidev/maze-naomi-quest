@@ -372,26 +372,26 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
       });
 
       // Handle player movement with improved collision
-      const speed = 0.1;
+      const speed = 0.12;
       const playerTarget = playerTargetRef.current;
       let targetX = playerTarget.x;
       let targetY = playerTarget.y;
 
-      // Calculate movement direction
+      // Calculate movement direction - check for lowercase keys
       let moveX = 0;
       let moveY = 0;
       
-      if (keysPressed.current.has("ArrowUp") || keysPressed.current.has("w")) {
+      if (keysPressed.current.has("arrowup") || keysPressed.current.has("w")) {
         moveY -= speed;
       }
-      if (keysPressed.current.has("ArrowDown") || keysPressed.current.has("s")) {
+      if (keysPressed.current.has("arrowdown") || keysPressed.current.has("s")) {
         moveY += speed;
       }
-      if (keysPressed.current.has("ArrowLeft") || keysPressed.current.has("a")) {
+      if (keysPressed.current.has("arrowleft") || keysPressed.current.has("a")) {
         moveX -= speed;
         playerFacingRight.current = false;
       }
-      if (keysPressed.current.has("ArrowRight") || keysPressed.current.has("d")) {
+      if (keysPressed.current.has("arrowright") || keysPressed.current.has("d")) {
         moveX += speed;
         playerFacingRight.current = true;
       }
@@ -595,10 +595,13 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
   // Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "w", "a", "s", "d"].includes(e.key)) {
+      const key = e.key.toLowerCase();
+      const validKeys = ["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d"];
+      
+      if (validKeys.includes(key)) {
         e.preventDefault();
-        const wasPressed = keysPressed.current.has(e.key);
-        keysPressed.current.add(e.key);
+        const wasPressed = keysPressed.current.has(key);
+        keysPressed.current.add(key);
         
         // Play step sound on first press
         if (!wasPressed) {
@@ -608,7 +611,8 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      keysPressed.current.delete(e.key);
+      const key = e.key.toLowerCase();
+      keysPressed.current.delete(key);
     };
 
     window.addEventListener("keydown", handleKeyDown);

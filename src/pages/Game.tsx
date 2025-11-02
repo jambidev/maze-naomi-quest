@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { MazeCanvas } from "@/components/game/MazeCanvas";
@@ -15,6 +15,8 @@ export default function Game() {
   const [userId, setUserId] = useState<string | null>(null);
   const [currentLevel, setCurrentLevel] = useState(1);
   const [totalScore, setTotalScore] = useState(0);
+  const gameAudioRef = useRef<HTMLAudioElement | null>(null);
+  const victoryAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -24,7 +26,45 @@ export default function Game() {
         setUserId(session.user.id);
       }
     });
+
+    // Initialize audio elements
+    gameAudioRef.current = new Audio("https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3");
+    victoryAudioRef.current = new Audio("https://assets.mixkit.co/music/preview/mixkit-dreaming-big-31.mp3");
+    
+    if (gameAudioRef.current) {
+      gameAudioRef.current.loop = true;
+      gameAudioRef.current.volume = 0.3;
+    }
+    if (victoryAudioRef.current) {
+      victoryAudioRef.current.loop = false;
+      victoryAudioRef.current.volume = 0.4;
+    }
+
+    return () => {
+      if (gameAudioRef.current) {
+        gameAudioRef.current.pause();
+        gameAudioRef.current = null;
+      }
+      if (victoryAudioRef.current) {
+        victoryAudioRef.current.pause();
+        victoryAudioRef.current = null;
+      }
+    };
   }, [navigate]);
+
+  useEffect(() => {
+    // Control music based on game state
+    if (gameState === "playing") {
+      gameAudioRef.current?.play().catch(() => {});
+      victoryAudioRef.current?.pause();
+    } else if (gameState === "won" || gameState === "complete") {
+      gameAudioRef.current?.pause();
+      victoryAudioRef.current?.play().catch(() => {});
+    } else if (gameState === "lost") {
+      gameAudioRef.current?.pause();
+      victoryAudioRef.current?.pause();
+    }
+  }, [gameState]);
 
   const handleGameOver = async (score: number, timeSeconds: number, enemiesAvoided: number) => {
     setGameState("lost");

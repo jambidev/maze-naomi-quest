@@ -40,7 +40,7 @@ export const Leaderboard = () => {
         `
         )
         .order("score", { ascending: false })
-        .limit(10);
+        .limit(5);
 
       if (error) throw error;
       setEntries(data || []);

@@ -26,6 +26,7 @@ interface Enemy {
 interface MazeCanvasProps {
   onGameOver: (score: number, timeSeconds: number, enemiesAvoided: number) => void;
   onWin: (score: number, timeSeconds: number, enemiesAvoided: number) => void;
+  level: number;
 }
 
 const CELL_SIZE = 40;
@@ -83,9 +84,11 @@ const findShortestPath = (maze: number[][], start: Position, goal: Position): Po
   return [];
 };
 
-export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
+export const MazeCanvas = ({ onGameOver, onWin, level }: MazeCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [hp, setHp] = useState(3);
+  // HP varies by level: Easy=5, Medium=4, Hard=3
+  const maxHp = level === 1 ? 5 : level === 2 ? 4 : 3;
+  const [hp, setHp] = useState(maxHp);
   const [score, setScore] = useState(0);
   const [gameTime, setGameTime] = useState(0);
   const [enemiesAvoided, setEnemiesAvoided] = useState(0);
@@ -325,29 +328,40 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
       return points;
     };
 
+    // Enemy count and speed vary by level
+    const enemySpeed = level === 1 ? 0.01 : level === 2 ? 0.018 : 0.025;
+    const enemyCount = level === 1 ? 2 : level === 2 ? 3 : 4;
+    
     const enemyConfigs: Array<{ start: Position | null; offsets: Position[]; speed: { dx: number; dy: number }; facingRight: boolean; animationOffset: number }> = [
       {
         start: pickSafeCell((pos) => pos.y < centralPathY - 1 && pos.x > 2 && pos.x < MAZE_WIDTH - 3),
         offsets: [{ x: 2, y: 0 }, { x: -2, y: 0 }],
-        speed: { dx: 0.015, dy: 0 },
+        speed: { dx: enemySpeed, dy: 0 },
         facingRight: true,
         animationOffset: 0,
       },
       {
         start: pickSafeCell((pos) => pos.y > 1 && pos.y < MAZE_HEIGHT - 2 && pos.x > 4 && pos.x < MAZE_WIDTH - 4),
         offsets: [{ x: 0, y: -2 }, { x: 0, y: 2 }],
-        speed: { dx: 0, dy: 0.015 },
+        speed: { dx: 0, dy: enemySpeed },
         facingRight: false,
         animationOffset: 120,
       },
       {
         start: pickSafeCell((pos) => pos.y > centralPathY + 1 && pos.x > 3 && pos.x < MAZE_WIDTH - 2),
         offsets: [{ x: 3, y: 0 }, { x: -3, y: 0 }],
-        speed: { dx: 0.02, dy: 0 },
+        speed: { dx: enemySpeed * 1.2, dy: 0 },
         facingRight: true,
         animationOffset: 240,
       },
-    ];
+      {
+        start: pickSafeCell((pos) => pos.y > 2 && pos.y < MAZE_HEIGHT - 3 && pos.x > 5 && pos.x < MAZE_WIDTH - 5),
+        offsets: [{ x: 2, y: 2 }, { x: -2, y: -2 }],
+        speed: { dx: enemySpeed * 0.8, dy: 0 },
+        facingRight: true,
+        animationOffset: 360,
+      },
+    ].slice(0, enemyCount);
 
     enemiesRef.current = enemyConfigs
       .filter((config) => config.start)
@@ -388,8 +402,9 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
     }
 
     startTimeRef.current = Date.now();
-    toast.success("Permainan dimulai! Raih trofi emas!");
-  }, []);
+    const levelName = level === 1 ? "Mudah" : level === 2 ? "Sedang" : "Sulit";
+    toast.success(`Level ${level} (${levelName}) dimulai! Raih trofi emas!`);
+  }, [level]);
 
   // Game loop
   useEffect(() => {
@@ -512,7 +527,8 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
       });
 
       // Handle player movement with improved collision
-      const speed = 0.12;
+      // Slightly faster speed for better responsiveness
+      const speed = 0.15;
       const playerTarget = playerTargetRef.current;
       let targetX = playerTarget.x;
       let targetY = playerTarget.y;
@@ -539,7 +555,7 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
       // Improved collision detection function
       const canMoveTo = (x: number, y: number): boolean => {
         const spriteRadius = PLAYER_SIZE / CELL_SIZE / 2;
-        const margin = spriteRadius - 0.05;
+        const margin = spriteRadius - 0.15; // More forgiving collision
         const worldX = x + 0.5;
         const worldY = y + 0.5;
         const checkPoints = [
@@ -664,7 +680,7 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
                 onGameOver(score, timeSeconds, enemiesAvoided);
                 toast.error("Game Over! Kamu tertangkap musuh!");
               } else {
-                toast.warning(`Terkena musuh! HP: ${newHp}/3`);
+                toast.warning(`Terkena musuh! HP: ${newHp}/${maxHp}`);
               }
               return newHp;
             });
@@ -767,8 +783,12 @@ export const MazeCanvas = ({ onGameOver, onWin }: MazeCanvasProps) => {
     <div className="flex flex-col items-center gap-4">
       <div className="flex gap-6 items-center text-lg font-semibold">
         <div className="flex items-center gap-2">
+          <span className="text-accent">🎮</span>
+          <span>Level: {level}/3</span>
+        </div>
+        <div className="flex items-center gap-2">
           <span className="text-destructive">❤️</span>
-          <span>HP: {hp}/3</span>
+          <span>HP: {hp}/{maxHp}</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-primary">⭐</span>

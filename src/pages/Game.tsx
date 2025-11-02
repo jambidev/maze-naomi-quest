@@ -9,10 +9,12 @@ import { Trophy, RotateCcw, Home } from "lucide-react";
 
 export default function Game() {
   const navigate = useNavigate();
-  const [gameState, setGameState] = useState<"playing" | "won" | "lost">("playing");
+  const [gameState, setGameState] = useState<"playing" | "won" | "lost" | "complete">("playing");
   const [finalScore, setFinalScore] = useState(0);
   const [finalTime, setFinalTime] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
+  const [currentLevel, setCurrentLevel] = useState(1);
+  const [totalScore, setTotalScore] = useState(0);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -35,12 +37,22 @@ export default function Game() {
   };
 
   const handleWin = async (score: number, timeSeconds: number, enemiesAvoided: number) => {
-    setGameState("won");
     setFinalScore(score);
     setFinalTime(timeSeconds);
+    setTotalScore(prev => prev + score);
     
-    if (userId) {
-      await saveScore(score, timeSeconds, enemiesAvoided);
+    if (currentLevel < 3) {
+      // Not final level, advance to next
+      setGameState("won");
+      if (userId) {
+        await saveScore(score, timeSeconds, enemiesAvoided);
+      }
+    } else {
+      // Final level completed!
+      setGameState("complete");
+      if (userId) {
+        await saveScore(score, timeSeconds, enemiesAvoided);
+      }
     }
   };
 
@@ -49,7 +61,7 @@ export default function Game() {
       const { error } = await supabase.from("game_scores").insert({
         user_id: userId,
         score,
-        level: 1,
+        level: currentLevel,
         time_seconds: timeSeconds,
         enemies_avoided: enemiesAvoided,
       });
@@ -60,6 +72,11 @@ export default function Game() {
       console.error("Error saving score:", error);
       toast.error("Gagal menyimpan skor");
     }
+  };
+
+  const handleNextLevel = () => {
+    setCurrentLevel(prev => prev + 1);
+    setGameState("playing");
   };
 
   const handleRestart = () => {
@@ -73,7 +90,7 @@ export default function Game() {
       <div className="max-w-4xl mx-auto relative z-10">
         <div className="flex justify-between items-center mb-8">
           <h1 className="title-banner text-2xl md:text-3xl font-bold shrink-0">
-            Maze Game Naomi
+            Maze Game Naomi - Level {currentLevel}
           </h1>
           <Button variant="outline" onClick={() => navigate("/")} className="gap-2">
             <Home className="w-4 h-4" />
@@ -84,7 +101,54 @@ export default function Game() {
         {gameState === "playing" ? (
           <Card className="glass-effect border-primary/20">
             <CardContent className="pt-6">
-              <MazeCanvas onGameOver={handleGameOver} onWin={handleWin} />
+              <MazeCanvas onGameOver={handleGameOver} onWin={handleWin} level={currentLevel} />
+            </CardContent>
+          </Card>
+        ) : gameState === "complete" ? (
+          <Card className="glass-effect border-primary/20 text-center">
+            <CardHeader>
+              <CardTitle className="text-4xl">
+                <span className="text-accent flex items-center justify-center gap-2">
+                  <Trophy className="w-10 h-10" />
+                  🎉 GAME TAMAT! 🎉
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <p className="text-2xl font-bold text-primary">
+                  Selamat! Kamu berhasil menyelesaikan semua level!
+                </p>
+                <div className="space-y-2 text-lg">
+                  <p>
+                    <span className="text-muted-foreground">Total Skor:</span>{" "}
+                    <span className="font-bold text-primary text-2xl">{totalScore + finalScore}</span>
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">Level Terakhir:</span>{" "}
+                    <span className="font-bold text-accent">{finalScore}</span>
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">Waktu:</span>{" "}
+                    <span className="font-bold text-accent">{finalTime}s</span>
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-muted-foreground text-lg">
+                Luar biasa! Kamu adalah juara sejati! 🏆
+              </p>
+
+              <div className="flex gap-4 justify-center">
+                <Button onClick={handleRestart} className="gap-2 glow-primary">
+                  <RotateCcw className="w-4 h-4" />
+                  Main Ulang
+                </Button>
+                <Button variant="outline" onClick={() => navigate("/")} className="gap-2">
+                  <Home className="w-4 h-4" />
+                  Menu Utama
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ) : (
@@ -114,20 +178,40 @@ export default function Game() {
               </div>
 
               {gameState === "won" && (
-                <p className="text-muted-foreground">
-                  Selamat! Kamu berhasil menyelesaikan labirin! 🎉
-                </p>
+                <div className="space-y-4">
+                  <p className="text-muted-foreground">
+                    Selamat! Kamu berhasil menyelesaikan Level {currentLevel}! 🎉
+                  </p>
+                  <p className="text-sm text-accent">
+                    Level berikutnya akan lebih menantang!
+                  </p>
+                </div>
               )}
 
               <div className="flex gap-4 justify-center">
-                <Button onClick={handleRestart} className="gap-2 glow-primary">
-                  <RotateCcw className="w-4 h-4" />
-                  Main Lagi
-                </Button>
-                <Button variant="outline" onClick={() => navigate("/")} className="gap-2">
-                  <Home className="w-4 h-4" />
-                  Menu Utama
-                </Button>
+                {gameState === "won" ? (
+                  <>
+                    <Button onClick={handleNextLevel} className="gap-2 glow-primary">
+                      <Trophy className="w-4 h-4" />
+                      Level Berikutnya
+                    </Button>
+                    <Button variant="outline" onClick={() => navigate("/")} className="gap-2">
+                      <Home className="w-4 h-4" />
+                      Menu Utama
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button onClick={handleRestart} className="gap-2 glow-primary">
+                      <RotateCcw className="w-4 h-4" />
+                      Main Lagi
+                    </Button>
+                    <Button variant="outline" onClick={() => navigate("/")} className="gap-2">
+                      <Home className="w-4 h-4" />
+                      Menu Utama
+                    </Button>
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>

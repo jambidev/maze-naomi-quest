@@ -58,8 +58,20 @@ export default function Index() {
   };
 
   return (
-    <div className="min-h-screen p-4 md:p-8">
-      <div className="absolute inset-0 game-gradient opacity-20"></div>
+    <div className="min-h-screen p-4 md:p-8 relative overflow-hidden">
+      {/* Video Background */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="fixed inset-0 w-full h-full object-cover -z-10"
+      >
+        <source src="/background-video.mp4" type="video/mp4" />
+      </video>
+      
+      {/* Dark overlay for better text readability */}
+      <div className="fixed inset-0 bg-black/50 -z-5"></div>
 
       <div className="max-w-6xl mx-auto relative z-10">
         {/* Header */}

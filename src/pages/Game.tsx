@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Trophy, RotateCcw, Home } from "lucide-react";
+import gameMusic from "@/assets/game-music.mp3";
 
 export default function Game() {
   const navigate = useNavigate();
@@ -28,7 +29,7 @@ export default function Game() {
     });
 
     // Initialize audio elements
-    gameAudioRef.current = new Audio("https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3");
+    gameAudioRef.current = new Audio(gameMusic);
     victoryAudioRef.current = new Audio("https://assets.mixkit.co/music/preview/mixkit-dreaming-big-31.mp3");
     
     if (gameAudioRef.current) {
